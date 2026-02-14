@@ -1,0 +1,17 @@
+{
+    "name": "Legal SaaS Admin Panel",
+    "short_name": "LegalSaaS",
+    "description": "Advanced Admin Panel for Legal SaaS Platform",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0a0f",
+    "theme_color": "#6366f1",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

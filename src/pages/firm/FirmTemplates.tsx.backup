@@ -1,0 +1,686 @@
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, Copy, Download, Plus, Trash2, Edit2, GripVertical } from 'lucide-react';
+import {
+    DndContext,
+    DragOverlay,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { type RagKnowledgeEntry, searchRagKnowledge } from '../../data/ragKnowledge';
+
+interface Template {
+    id: number;
+    name: string;
+    type: string;
+    uses: number;
+    lastUsed: string;
+    desc: string;
+    color: string;
+    content: string;
+}
+
+function getDefaultContent(name: string, type: string, desc: string) {
+    return `
+        <h2>TYTUŁ DOKUMENTU: ${name}</h2>
+        <p><strong>Kategoria:</strong> ${type}</p>
+        <p><strong>Data:</strong> ${new Date().toLocaleDateString('pl-PL')}</p>
+        <p><strong>Opis:</strong> ${desc}</p>
+        <p><strong>Treść dokumentu:</strong></p>
+        <p>...............................................................................</p>
+        <p>...............................................................................</p>
+        <p>...............................................................................</p>
+        <p><strong>Podpis:</strong> ........................................</p>
+    `.trim();
+}
+
+function normalizeTemplateContent(content: string) {
+    if (!content) return '<p></p>';
+    if (/<\/?[a-z][\s\S]*>/i.test(content)) {
+        return content;
+    }
+
+    return content
+        .split(/\n\n+/)
+        .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br/>')}</p>`)
+        .join('');
+}
+
+function stripHtml(input: string) {
+    if (typeof document === 'undefined') return input;
+    const node = document.createElement('div');
+    node.innerHTML = input;
+    return node.textContent || node.innerText || '';
+}
+
+const polishChars = ['Ą', 'Ć', 'Ę', 'Ł', 'Ń', 'Ó', 'Ś', 'Ź', 'Ż', 'ą', 'ć', 'ę', 'ł', 'ń', 'ó', 'ś', 'ź', 'ż', '§'];
+
+const initialTemplates: Template[] = [
+    { id: 1, name: 'Pozew o zapłatę', type: 'Pozew', uses: 34, lastUsed: '2026-02-10', desc: 'Standardowy pozew w postępowaniu cywilnym o roszczenie pieniężne', color: '#ef4444', content: getDefaultContent('Pozew o zapłatę', 'Pozew', 'Standardowy pozew w postępowaniu cywilnym o roszczenie pieniężne') },
+    { id: 2, name: 'Apelacja od wyroku', type: 'Apelacja', uses: 12, lastUsed: '2026-02-08', desc: 'Szablon apelacji od wyroku sądu I instancji', color: '#3b82f6', content: getDefaultContent('Apelacja od wyroku', 'Apelacja', 'Szablon apelacji od wyroku sądu I instancji') },
+    { id: 3, name: 'Wniosek o zabezpieczenie', type: 'Wniosek', uses: 8, lastUsed: '2026-02-05', desc: 'Wniosek o zabezpieczenie roszczenia w postępowaniu cywilnym', color: '#10b981', content: getDefaultContent('Wniosek o zabezpieczenie', 'Wniosek', 'Wniosek o zabezpieczenie roszczenia w postępowaniu cywilnym') },
+    { id: 4, name: 'Umowa zlecenie', type: 'Umowa', uses: 22, lastUsed: '2026-02-09', desc: 'Uniwersalny szablon umowy zlecenia', color: '#a855f7', content: getDefaultContent('Umowa zlecenie', 'Umowa', 'Uniwersalny szablon umowy zlecenia') },
+    { id: 5, name: 'Pismo przewodnie', type: 'Pismo', uses: 45, lastUsed: '2026-02-11', desc: 'Pismo przewodnie do sądu z załącznikami', color: '#f59e0b', content: getDefaultContent('Pismo przewodnie', 'Pismo', 'Pismo przewodnie do sądu z załącznikami') },
+    { id: 6, name: 'Odwołanie od decyzji ZUS', type: 'Odwołanie', uses: 6, lastUsed: '2026-01-28', desc: 'Odwołanie od decyzji organu rentowego do sądu pracy', color: '#6366f1', content: getDefaultContent('Odwołanie od decyzji ZUS', 'Odwołanie', 'Odwołanie od decyzji organu rentowego do sądu pracy') },
+];
+
+function SortableItem({
+    template,
+    onDelete,
+    onEdit,
+    onDownload,
+    onCopy,
+}: {
+    template: Template;
+    onDelete: (id: number) => void;
+    onEdit: (t: Template) => void;
+    onDownload: (t: Template) => void;
+    onCopy: (t: Template) => void;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: template.id,
+        transition: {
+            duration: 220,
+            easing: 'cubic-bezier(0.2, 0, 0, 1)',
+        },
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 20 : 1,
+        opacity: isDragging ? 0.88 : 1,
+        boxShadow: isDragging ? '0 18px 40px rgba(15, 23, 42, 0.35)' : undefined,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="card relative group overflow-hidden h-full min-h-55">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: template.color, opacity: 0.45 }} />
+            <div className="p-5 h-full flex flex-col">
+                <div className="flex justify-between items-start mb-3">
+                    <div className="flex gap-3 items-center">
+                        <div
+                            {...attributes}
+                            {...listeners}
+                            className="cursor-grab active:cursor-grabbing hover:text-var(--accent) text-var(--text-tertiary) rounded-md p-1 transition-transform hover:scale-105"
+                            title="Przeciągnij, aby zmienić kolejność"
+                        >
+                            <GripVertical size={18} />
+                        </div>
+                        <div className="p-2 rounded-lg bg-var(--bg-secondary)">
+                            <FileText size={20} className="text-var(--text-secondary)" />
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-sm leading-tight">{template.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] uppercase tracking-wider font-bold text-var(--text-tertiary)">{template.type}</span>
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: template.color, opacity: 0.8 }} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => onEdit(template)} className="p-1.5 hover:bg-var(--bg-secondary) rounded text-var(--text-tertiary) hover:text-var(--text-primary)">
+                            <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => onDelete(template.id)} className="p-1.5 hover:bg-red-500/10 rounded text-var(--text-tertiary) hover:text-red-500">
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+                </div>
+
+                <p className="text-xs text-var(--text-secondary) mb-4 line-clamp-2 leading-relaxed h-8">{template.desc}</p>
+
+                <div className="flex justify-between items-center pt-3 border-t border-var(--border-secondary) mt-auto">
+                    <div className="text-[11px] text-var(--text-tertiary)">
+                        <span className="font-medium text-var(--text-secondary)">{template.uses}×</span> użyć
+                    </div>
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                        <button className="btn btn-ghost btn-sm h-8 px-3 min-w-24" title="Kopiuj treść" onClick={() => onCopy(template)}>
+                            <Copy size={13} /> Kopiuj
+                        </button>
+                        <button className="btn btn-secondary btn-sm h-8 px-3 text-xs" onClick={() => onDownload(template)}>
+                            <Download size={13} /> Pobierz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function FirmTemplates() {
+    const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+    const [isEditing, setIsEditing] = useState(false);
+    const [currentTemplate, setCurrentTemplate] = useState<Template | null>(null);
+    const [activeDragId, setActiveDragId] = useState<number | null>(null);
+    const [ragSuggestions, setRagSuggestions] = useState<RagKnowledgeEntry[]>([]);
+    const [ragQuery, setRagQuery] = useState('');
+    const editorRef = useRef<HTMLDivElement | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 6,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            setTemplates((items) => {
+                const oldIndex = items.findIndex((i) => i.id === active.id);
+                const newIndex = items.findIndex((i) => i.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+
+        setActiveDragId(null);
+    };
+
+    const handleDelete = (id: number) => {
+        if (window.confirm('Czy na pewno chcesz usunąć ten szablon?')) {
+            setTemplates((prev) => prev.filter((t) => t.id !== id));
+        }
+    };
+
+    const handleEdit = (template: Template) => {
+        setCurrentTemplate({ ...template, content: normalizeTemplateContent(template.content) });
+        setIsEditing(true);
+    };
+
+    const handleDownload = (template: Template) => {
+        setCurrentTemplate({ ...template, content: normalizeTemplateContent(template.content) });
+        setIsEditing(true);
+    };
+
+    const handleSave = () => {
+        if (!currentTemplate) return;
+        setTemplates((prev) => prev.map((t) => (t.id === currentTemplate.id ? currentTemplate : t)));
+        setIsEditing(false);
+        setCurrentTemplate(null);
+    };
+
+    const handlePrintA4 = () => {
+        if (!currentTemplate) return;
+
+        const printWindow = window.open('', '_blank', 'width=900,height=1200');
+        if (!printWindow) return;
+
+        const safeHtml = currentTemplate.content.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html lang="pl">
+            <head>
+                <meta charset="UTF-8" />
+                <title>${currentTemplate.name}</title>
+                <style>
+                    @page { size: A4; margin: 16mm; }
+                    body { margin: 0; font-family: Roboto, Arial, sans-serif; background: #f4f6fb; }
+                    .a4 {
+                        width: 210mm;
+                        min-height: 297mm;
+                        margin: 16px auto;
+                        background: white;
+                        box-sizing: border-box;
+                        padding: 16mm;
+                        border: 1px solid #dbe2ef;
+                    }
+                    h1 { margin: 0 0 8px; font-size: 20px; }
+                    .meta { margin: 0 0 16px; color: #64748b; font-size: 12px; }
+                    .content { font-size: 12px; line-height: 1.6; color: #0f172a; }
+                    .content h1,.content h2,.content h3 { margin: 0 0 8px; }
+                    .content p { margin: 0 0 8px; }
+                    .content ul,.content ol { margin: 0 0 8px 20px; }
+                    @media print {
+                        body { background: white; }
+                        .a4 { margin: 0; border: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <article class="a4">
+                    <h1>${currentTemplate.name}</h1>
+                    <p class="meta">Kategoria: ${currentTemplate.type}</p>
+                    <div class="content">${safeHtml}</div>
+                </article>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
+
+    const handleAdd = () => {
+        const newTemplate: Template = {
+            id: Date.now(),
+            name: 'Nowy szablon',
+            type: 'Inne',
+            uses: 0,
+            lastUsed: new Date().toISOString().split('T')[0],
+            desc: 'Opis nowego szablonu...',
+            color: '#94a3b8',
+            content: getDefaultContent('Nowy szablon', 'Inne', 'Opis nowego szablonu...'),
+        };
+        setTemplates([newTemplate, ...templates]);
+    };
+
+    const applyEditorCommand = (command: string, value?: string) => {
+        editorRef.current?.focus();
+        document.execCommand(command, false, value ?? '');
+        if (editorRef.current && currentTemplate) {
+            setCurrentTemplate({ ...currentTemplate, content: editorRef.current.innerHTML });
+        }
+    };
+
+    const updateRagSuggestions = (text: string) => {
+        const recentChunk = text.slice(Math.max(0, text.length - 220));
+        const match = recentChunk.match(/(art\.?\s*\d*[a-z]?|§\s*\d*[a-z]?)/i);
+        const query = (match?.[1] || '').trim();
+
+        if (query.length < 4) {
+            setRagQuery('');
+            setRagSuggestions([]);
+            return;
+        }
+
+        setRagQuery(query);
+        setRagSuggestions(searchRagKnowledge(query, 5));
+    };
+
+    const handleEditorInput = (event: React.FormEvent<HTMLDivElement>) => {
+        if (!currentTemplate) return;
+        const html = event.currentTarget.innerHTML;
+        const text = event.currentTarget.innerText;
+        setCurrentTemplate({ ...currentTemplate, content: html });
+        updateRagSuggestions(text);
+    };
+
+    const insertPolishChar = (character: string) => {
+        applyEditorCommand('insertText', character);
+    };
+
+    const insertRagSuggestion = (entry: RagKnowledgeEntry) => {
+        const snippet = `<p><strong>${entry.art} (${entry.code})</strong> — ${entry.title}</p><p>${entry.content}</p>`;
+        applyEditorCommand('insertHTML', snippet);
+        setRagSuggestions([]);
+        setRagQuery('');
+    };
+
+    const handleCopy = async (template: Template) => {
+        const plainText = stripHtml(normalizeTemplateContent(template.content));
+        await navigator.clipboard.writeText(plainText);
+    };
+
+    useEffect(() => {
+        if (!isEditing || !currentTemplate || !editorRef.current) return;
+        editorRef.current.innerHTML = currentTemplate.content;
+    }, [isEditing, currentTemplate?.id]);
+
+    const activeDragTemplate = templates.find((t) => t.id === activeDragId) || null;
+    const toolbarButtons = useMemo(
+        () => [
+            { label: 'B', title: 'Pogrubienie', action: () => applyEditorCommand('bold'), group: 'text' },
+            { label: 'I', title: 'Kursywa', action: () => applyEditorCommand('italic'), group: 'text' },
+            { label: 'U', title: 'Podkreślenie', action: () => applyEditorCommand('underline'), group: 'text' },
+            { label: 'S', title: 'Przekreślenie', action: () => applyEditorCommand('strikeThrough'), group: 'text' },
+            { label: 'H1', title: 'Nagłówek 1', action: () => applyEditorCommand('formatBlock', '<h1>'), group: 'format' },
+            { label: 'H2', title: 'Nagłówek 2', action: () => applyEditorCommand('formatBlock', '<h2>'), group: 'format' },
+            { label: 'H3', title: 'Nagłówek 3', action: () => applyEditorCommand('formatBlock', '<h3>'), group: 'format' },
+            { label: 'P', title: 'Akapit', action: () => applyEditorCommand('formatBlock', '<p>'), group: 'format' },
+            { label: '•', title: 'Lista punktowana', action: () => applyEditorCommand('insertUnorderedList'), group: 'list' },
+            { label: '1.', title: 'Lista numerowana', action: () => applyEditorCommand('insertOrderedList'), group: 'list' },
+            { label: '◁', title: 'Zmniejsz wcięcie', action: () => applyEditorCommand('outdent'), group: 'list' },
+            { label: '▷', title: 'Zwiększ wcięcie', action: () => applyEditorCommand('indent'), group: 'list' },
+            { label: '≡L', title: 'Wyrównaj do lewej', action: () => applyEditorCommand('justifyLeft'), group: 'align' },
+            { label: '≡C', title: 'Wyśrodkuj', action: () => applyEditorCommand('justifyCenter'), group: 'align' },
+            { label: '≡R', title: 'Wyrównaj do prawej', action: () => applyEditorCommand('justifyRight'), group: 'align' },
+            { label: '≡J', title: 'Wyjustuj', action: () => applyEditorCommand('justifyFull'), group: 'align' },
+            { label: '🔗', title: 'Wstaw link', action: () => { const url = prompt('Wpisz adres URL:'); if (url) applyEditorCommand('createLink', url); }, group: 'insert' },
+            { label: '⌫', title: 'Wyczyść formatowanie', action: () => applyEditorCommand('removeFormat'), group: 'insert' },
+            { label: '↶', title: 'Cofnij', action: () => applyEditorCommand('undo'), group: 'history' },
+            { label: '↷', title: 'Ponów', action: () => applyEditorCommand('redo'), group: 'history' },
+        ],
+        [currentTemplate]
+    );
+
+    return (
+        <div className="animate-in">
+            <div className="page-header">
+                <div>
+                    <h2 className="flex items-center gap-3">
+                        Szablony dokumentów
+                        <span className="badge badge-neutral text-[10px] py-0.5">{templates.length}</span>
+                    </h2>
+                    <p className="page-header-sub">Zarządzaj wzorami pism i umów Twojej kancelarii</p>
+                </div>
+                <button onClick={handleAdd} className="btn btn-primary">
+                    <Plus size={15} /> Dodaj szablon
+                </button>
+            </div>
+
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={({ active }) => setActiveDragId(Number(active.id))}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => setActiveDragId(null)}
+            >
+                <SortableContext items={templates.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 auto-rows-fr items-stretch">
+                        {templates.map((t) => (
+                            <SortableItem
+                                key={t.id}
+                                template={t}
+                                onDelete={handleDelete}
+                                onEdit={handleEdit}
+                                onDownload={handleDownload}
+                                onCopy={handleCopy}
+                            />
+                        ))}
+                    </div>
+                </SortableContext>
+                <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
+                    {activeDragTemplate ? (
+                        <div className="card relative overflow-hidden" style={{ width: 320 }}>
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: activeDragTemplate.color, opacity: 0.45 }} />
+                            <div className="p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <FileText size={16} className="text-var(--text-secondary)" />
+                                    <h4 className="font-semibold text-sm">{activeDragTemplate.name}</h4>
+                                </div>
+                                <p className="text-xs text-var(--text-secondary)">{activeDragTemplate.desc}</p>
+                            </div>
+                        </div>
+                    ) : null}
+                </DragOverlay>
+            </DndContext>
+
+            {isEditing && currentTemplate && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-1000 flex items-start xl:items-center justify-center p-3 sm:p-4 xl:p-6 overflow-y-auto">
+                    <div
+                        className="bg-var(--bg-secondary) rounded-xl p-4 sm:p-6 w-full max-w-7xl shadow-2xl border border-var(--border-secondary) animate-in my-3 xl:my-0"
+                        style={{ maxHeight: 'calc(100vh - 24px)', overflow: 'hidden' }}
+                    >
+                        <h3 className="text-xl mb-1">Edycja szablonu + podgląd A4</h3>
+                        <p className="text-xs text-var(--text-tertiary) mb-4">
+                            Zmiany aktualizują się na żywo w podglądzie po prawej. Wpisz np. „art. 286” lub „§ 1”, aby dostać podpowiedzi z bazy RAG.
+                        </p>
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6" style={{ maxHeight: 'calc(100vh - 180px)', overflow: 'hidden' }}>
+                            <div className="space-y-4 overflow-y-auto pr-1" style={{ minHeight: 0 }}>
+                                <div className="form-group">
+                                    <label>Nazwa szablonu</label>
+                                    <input
+                                        className="w-full"
+                                        value={currentTemplate.name}
+                                        onChange={(e) => setCurrentTemplate({ ...currentTemplate, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="form-group">
+                                        <label>Kategoria</label>
+                                        <input
+                                            className="w-full"
+                                            value={currentTemplate.type}
+                                            onChange={(e) => setCurrentTemplate({ ...currentTemplate, type: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Kolor</label>
+                                        <input
+                                            type="color"
+                                            className="w-full h-11 p-1 rounded-lg"
+                                            value={currentTemplate.color}
+                                            onChange={(e) => setCurrentTemplate({ ...currentTemplate, color: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Opis</label>
+                                    <textarea
+                                        className="w-full"
+                                        rows={3}
+                                        value={currentTemplate.desc}
+                                        onChange={(e) => setCurrentTemplate({ ...currentTemplate, desc: e.target.value })}
+                                    ></textarea>
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="text-sm font-semibold mb-3 block">Treść dokumentu (WYSIWYG)</label>
+                                    <div className="rounded-xl border-2 border-var(--border-secondary) bg-white shadow-lg overflow-hidden">
+                                        {/* Toolbar - sticky, z grupowaniem */}
+                                        <div className="sticky top-0 z-10 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-850 border-b-2 border-var(--border-secondary) p-3">
+                                            <div className="flex flex-wrap gap-2 items-center">
+                                                {/* Grupa: Formatowanie tekstu */}
+                                                <div className="flex gap-1 pr-2 border-r border-var(--border-secondary)">
+                                                    {toolbarButtons.filter(b => b.group === 'text').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-3 font-semibold hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Grupa: Nagłówki i akapity */}
+                                                <div className="flex gap-1 pr-2 border-r border-var(--border-secondary)">
+                                                    {toolbarButtons.filter(b => b.group === 'format').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-2.5 text-xs font-medium hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/30 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Grupa: Listy i wcięcia */}
+                                                <div className="flex gap-1 pr-2 border-r border-var(--border-secondary)">
+                                                    {toolbarButtons.filter(b => b.group === 'list').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-2.5 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/30 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Grupa: Wyrównanie */}
+                                                <div className="flex gap-1 pr-2 border-r border-var(--border-secondary)">
+                                                    {toolbarButtons.filter(b => b.group === 'align').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-2.5 text-xs hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/30 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Grupa: Wstawianie i czyszczenie */}
+                                                <div className="flex gap-1 pr-2 border-r border-var(--border-secondary)">
+                                                    {toolbarButtons.filter(b => b.group === 'insert').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-2.5 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                
+                                                {/* Grupa: Historia */}
+                                                <div className="flex gap-1">
+                                                    {toolbarButtons.filter(b => b.group === 'history').map((item) => (
+                                                        <button 
+                                                            key={item.label} 
+                                                            type="button" 
+                                                            className="btn btn-ghost btn-sm h-9 px-3 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 transition-all" 
+                                                            onClick={item.action}
+                                                            title={item.title}
+                                                        >
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Edytor WYSIWYG */}
+                                        <div
+                                            ref={editorRef}
+                                            className="p-6 min-h-80 max-h-[480px] overflow-y-auto text-[15px] leading-relaxed focus:outline-none bg-white dark:bg-slate-900"
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onInput={handleEditorInput}
+                                            lang="pl"
+                                            spellCheck
+                                            style={{ 
+                                                unicodeBidi: 'plaintext',
+                                                fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+                                                textRendering: 'optimizeLegibility',
+                                                WebkitFontSmoothing: 'antialiased',
+                                                MozOsxFontSmoothing: 'grayscale',
+                                            }}
+                                        />
+                                        
+                                        {/* Pasek z polskimi znakami */}
+                                        <div className="p-3 border-t-2 border-var(--border-secondary) bg-gradient-to-b from-slate-100 to-slate-50 dark:from-slate-850 dark:to-slate-800">
+                                            <div className="text-[10px] uppercase tracking-wider font-bold text-var(--text-tertiary) mb-2">Znaki specjalne</div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {polishChars.map((character) => (
+                                                    <button 
+                                                        key={character} 
+                                                        type="button" 
+                                                        className="btn btn-ghost btn-sm h-8 px-3 font-medium hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/40 transition-all text-sm" 
+                                                        onClick={() => insertPolishChar(character)}
+                                                        title={`Wstaw znak: ${character}`}
+                                                    >
+                                                        {character}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {!!ragSuggestions.length && (
+                                    <div className="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-4 shadow-md animate-in">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="text-sm font-bold flex items-center gap-2">
+                                                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                                Podpowiedzi z bazy RAG
+                                            </h4>
+                                            <span className="text-[11px] font-mono bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded text-blue-700 dark:text-blue-300">{ragQuery}</span>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {ragSuggestions.map((entry) => (
+                                                <div key={entry.id} className="rounded-lg border border-blue-200 bg-white dark:bg-slate-900 p-3 shadow-sm hover:shadow-md transition-shadow">
+                                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                                        <div className="text-xs font-bold text-blue-700 dark:text-blue-400">{entry.art} • {entry.title}</div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-primary btn-sm h-8 px-3 text-xs"
+                                                            onClick={() => insertRagSuggestion(entry)}
+                                                        >
+                                                            + Dodaj
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-xs text-var(--text-secondary) line-clamp-2 leading-relaxed">{entry.content}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-wrap gap-3 pt-3 pb-2 sticky bottom-0 bg-var(--bg-secondary) border-t-2 border-var(--border-secondary) -mx-1 px-1 py-3">
+                                    <button className="btn btn-primary flex-1 sm:flex-none" onClick={handleSave}>
+                                        ✓ Zapisz zmiany
+                                    </button>
+                                    <button
+                                        className="btn btn-ghost flex-1 sm:flex-none"
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setCurrentTemplate(null);
+                                            setRagSuggestions([]);
+                                            setRagQuery('');
+                                        }}
+                                    >
+                                        ✕ Anuluj
+                                    </button>
+                                    <button className="btn btn-secondary flex-1 sm:flex-none" onClick={handlePrintA4}>
+                                        <Download size={15} /> Pobierz PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Prawa kolumna - Podgląd A4 */}
+                            <div className="hidden xl:block rounded-2xl border-2 border-var(--border-secondary) bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 p-6 overflow-auto custom-scrollbar shadow-inner" style={{ minHeight: 0 }}>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h4 className="text-sm font-bold text-var(--text-tertiary) uppercase tracking-wider">Podgląd A4 na żywo</h4>
+                                    <div className="text-xs text-var(--text-tertiary)">210 × 297 mm</div>
+                                </div>
+                                <div
+                                    className="a4-preview"
+                                    style={{
+                                        width: 'min(100%, 210mm)',
+                                        minHeight: '297mm',
+                                        margin: '0 auto',
+                                        background: 'white',
+                                        color: '#0f172a',
+                                        padding: '16mm',
+                                        boxShadow: '0 20px 60px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(15, 23, 42, 0.05)',
+                                        borderRadius: '4px',
+                                    }}
+                                >
+                                    <h1 style={{ margin: 0, fontSize: 26, color: '#0f172a', fontWeight: 700, marginBottom: 8 }}>{currentTemplate.name}</h1>
+                                    <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b', borderBottom: '2px solid #e2e8f0', paddingBottom: 12 }}>
+                                        Kategoria: <strong>{currentTemplate.type}</strong>
+                                    </p>
+                                    <div 
+                                        style={{ lineHeight: 1.7, fontSize: 13, color: '#1e293b' }} 
+                                        dangerouslySetInnerHTML={{ __html: currentTemplate.content }} 
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
