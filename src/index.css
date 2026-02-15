@@ -4670,6 +4670,21 @@ select {
     max-height: 50vh;
     overflow-y: auto;
   }
+
+  .notif-dropdown {
+    position: fixed;
+    top: var(--topbar-height);
+    left: 0;
+    right: 0;
+    width: 100%;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    max-height: 60vh;
+    overflow: hidden;
+  }
+
+  .notif-list {
+    max-height: calc(60vh - 56px);
+  }
 }
 
 /* Page header - stack na mobile */

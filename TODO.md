@@ -110,7 +110,7 @@
 - [x] **Dzień 3-4:** Modals i dropdowns
   - [x] Search dropdown - full-width na mobile
   - [x] User dropdown - positioning fix
-  - [ ] Notification dropdown - max-height + scroll
+  - [x] Notification dropdown - max-height + scroll
   - [x] Wszystkie modals - full-screen lub max-width
 
 - [ ] **Dzień 4-5:** Final testing & fixes
