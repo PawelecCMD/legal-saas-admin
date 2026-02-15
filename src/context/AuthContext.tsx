@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { authService } from '../services/api';
 
 export type UserRole = 'admin' | 'kancelaria' | 'klient';
@@ -48,14 +48,13 @@ const parseJwt = (token: string): Partial<AuthUser> | null => {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(null);
+    const [user, setUser] = useState<AuthUser | null>(() => {
+        if (typeof window === 'undefined') return null;
 
-    useEffect(() => {
         const stored = localStorage.getItem(USER_KEY);
         if (stored) {
             try {
-                setUser(JSON.parse(stored));
-                return;
+                return JSON.parse(stored) as AuthUser;
             } catch {
                 /* ignore */
             }
@@ -71,11 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     role: parsed.role as UserRole,
                     firmName: parsed.firmName,
                 };
-                setUser(u);
                 localStorage.setItem(USER_KEY, JSON.stringify(u));
+                return u;
             }
         }
-    }, []);
+
+        return null;
+    });
 
     const login = async (email: string, password: string, role: UserRole) => {
         if (AUTH_MODE === 'jwt') {
