@@ -98,7 +98,7 @@
 - [x] **Dzień 1-2:** Kanban board mobile
   - [x] `src/pages/firm/FirmCases.tsx`
   - [x] Horizontal scroll dla kolumn
-  - [ ] Touch-friendly drag handles
+  - [x] Touch-friendly drag handles
   - [ ] Test na iPhone SE
 
 - [x] **Dzień 2-3:** Touch targets

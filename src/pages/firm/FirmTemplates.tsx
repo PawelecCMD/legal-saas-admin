@@ -111,7 +111,7 @@ function SortableItem({
                         <div
                             {...attributes}
                             {...listeners}
-                            className="cursor-grab active:cursor-grabbing hover:text-var(--accent) text-var(--text-tertiary) rounded-md p-1 transition-transform hover:scale-105"
+                            className="drag-handle cursor-grab active:cursor-grabbing hover:text-var(--accent) text-var(--text-tertiary) rounded-md transition-transform hover:scale-105"
                             title="Przeciągnij, aby zmienić kolejność"
                         >
                             <GripVertical size={18} />
