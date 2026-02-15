@@ -25,7 +25,7 @@ export default function SecurityPage() {
                 <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Zablokowane IP</span><Lock size={16} className="stat-card-icon" /></div><div className="stat-card-value">{blockedIPs.length}</div></div>
                 <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Alerty bezp. (7d)</span><AlertTriangle size={16} className="stat-card-icon" /></div><div className="stat-card-value" style={{ color: 'var(--warning)' }}>3</div></div>
             </div>
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title"><Shield size={16} style={{ marginRight: 8 }} />Polityka haseł i 2FA</span></div>
                     {policies.map((p, i) => (

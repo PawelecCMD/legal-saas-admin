@@ -62,11 +62,11 @@
 **Deadline:** _______________
 
 ### Tydzień 1
-- [ ] **Dzień 1-2:** Tailwind Config
-  - [ ] Dodać breakpointy (xs, sm, md, lg, xl, 2xl)
-  - [ ] Dodać spacing (safe-bottom, etc.)
-  - [ ] Dodać minHeight (touch, touch-lg)
-  - [ ] Test: `npm run build` bez errors
+- [x] **Dzień 1-2:** Tailwind Config
+  - [x] Dodać breakpointy (xs, sm, md, lg, xl, 2xl)
+  - [x] Dodać spacing (safe-bottom, etc.)
+  - [x] Dodać minHeight (touch, touch-lg)
+  - [x] Test: `npm run build` bez errors
 
 - [ ] **Dzień 2-3:** Responsive DataTable Component
   - [ ] Utworzyć `src/components/DataTable/index.tsx`
@@ -75,43 +75,43 @@
   - [ ] Hook: useIsMobile dla conditional rendering
   - [ ] Props: columns, data, actions
 
-- [ ] **Dzień 3-4:** Zamiana tabel administratora
-  - [ ] `src/pages/Users.tsx` - responsive table
-  - [ ] `src/pages/LawFirms.tsx` - responsive table
-  - [ ] `src/pages/Lawyers.tsx` - responsive table
-  - [ ] `src/pages/Cases.tsx` - responsive table
+- [x] **Dzień 3-4:** Zamiana tabel administratora
+  - [x] `src/pages/Users.tsx` - responsive table
+  - [x] `src/pages/LawFirms.tsx` - responsive table
+  - [x] `src/pages/Lawyers.tsx` - responsive table
+  - [x] `src/pages/Cases.tsx` - responsive table
   - [ ] Test każdej strony: 375px, 768px, 1920px
 
-- [ ] **Dzień 4-5:** Pozostałe tabele
-  - [ ] `src/pages/Documents.tsx`
-  - [ ] `src/pages/Payments.tsx`
-  - [ ] `src/pages/Invoices.tsx`
-  - [ ] `src/pages/Promotions.tsx`
-  - [ ] `src/pages/Support.tsx` (tickets)
+- [x] **Dzień 4-5:** Pozostałe tabele
+  - [x] `src/pages/Documents.tsx`
+  - [x] `src/pages/Payments.tsx`
+  - [x] `src/pages/Invoices.tsx`
+  - [x] `src/pages/Promotions.tsx`
+  - [x] `src/pages/Support.tsx` (tickets)
 
-- [ ] **Dzień 5:** Hardcoded grids
-  - [ ] `src/pages/Dashboard.tsx` - zamień `.grid-2` na Tailwind
-  - [ ] `src/pages/firm/FirmDashboard.tsx` - zamień grids
-  - [ ] Wszystkie inne wystąpienia hardcoded grids
+- [x] **Dzień 5:** Hardcoded grids
+  - [x] `src/pages/Dashboard.tsx` - zamień `.grid-2` na Tailwind
+  - [x] `src/pages/firm/FirmDashboard.tsx` - zamień grids
+  - [x] Wszystkie inne wystąpienia hardcoded grids
 
 ### Tydzień 2
-- [ ] **Dzień 1-2:** Kanban board mobile
-  - [ ] `src/pages/firm/FirmCases.tsx`
-  - [ ] Horizontal scroll dla kolumn
+- [x] **Dzień 1-2:** Kanban board mobile
+  - [x] `src/pages/firm/FirmCases.tsx`
+  - [x] Horizontal scroll dla kolumn
   - [ ] Touch-friendly drag handles
   - [ ] Test na iPhone SE
 
-- [ ] **Dzień 2-3:** Touch targets
-  - [ ] Sidebar links - min-height 44px
-  - [ ] Wszystkie buttony - min-height 44px
-  - [ ] Icon buttons - min-width/height 44px
-  - [ ] Bottom nav (client) - wysokość OK
+- [x] **Dzień 2-3:** Touch targets
+  - [x] Sidebar links - min-height 44px
+  - [x] Wszystkie buttony - min-height 44px
+  - [x] Icon buttons - min-width/height 44px
+  - [x] Bottom nav (client) - wysokość OK
 
-- [ ] **Dzień 3-4:** Modals i dropdowns
-  - [ ] Search dropdown - full-width na mobile
-  - [ ] User dropdown - positioning fix
+- [x] **Dzień 3-4:** Modals i dropdowns
+  - [x] Search dropdown - full-width na mobile
+  - [x] User dropdown - positioning fix
   - [ ] Notification dropdown - max-height + scroll
-  - [ ] Wszystkie modals - full-screen lub max-width
+  - [x] Wszystkie modals - full-screen lub max-width
 
 - [ ] **Dzień 4-5:** Final testing & fixes
   - [ ] Test wszystkich stron na iPhone SE (375px)

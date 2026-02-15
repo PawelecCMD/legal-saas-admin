@@ -115,7 +115,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header">
                         <span className="card-title">Top 5 kancelarii</span>

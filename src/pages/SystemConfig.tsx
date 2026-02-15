@@ -7,7 +7,7 @@ export default function SystemConfigPage() {
                 <div><h2>Konfiguracja systemu</h2><p className="page-header-sub">Ustawienia platformy, SMTP, API, webhooki</p></div>
                 <button className="btn btn-primary"><Save size={15} /> Zapisz zmiany</button>
             </div>
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title"><Globe size={16} style={{ marginRight: 8 }} />Ogólne</span></div>
                     <div className="form-group"><label>Nazwa platformy</label><input type="text" defaultValue="Legal SaaS Platform" /></div>

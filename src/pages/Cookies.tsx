@@ -14,7 +14,7 @@ export default function CookiesPage() {
                 <div><h2>Zarządzanie cookies</h2><p className="page-header-sub">Konfiguracja banneru RODO i zgód</p></div>
                 <button className="btn btn-primary"><Save size={15} /> Zapisz</button>
             </div>
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title"><Cookie size={16} style={{ marginRight: 8 }} />Kategorie cookies</span></div>
                     {categories.map((c, i) => (

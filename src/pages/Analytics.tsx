@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
                 <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Konwersja → płatność</span><TrendingUp size={16} className="stat-card-icon" /></div><div className="stat-card-value">34%</div></div>
             </div>
 
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title">Przychody vs Sprawy (Miesiące)</span></div>
                     <ResponsiveContainer width="100%" height={260}>

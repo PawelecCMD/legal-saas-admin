@@ -4,7 +4,7 @@ export default function CMSPage() {
     return (
         <div className="animate-in">
             <div className="page-header"><div><h2>CMS i marketing</h2><p className="page-header-sub">Landing page builder, SEO, newsletter, opinie</p></div></div>
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title"><Globe size={16} style={{ marginRight: 8 }} />Landing Page Builder</span><button className="btn btn-secondary btn-sm">Edytuj</button></div>
                     {['Hero', 'Jak to działa', 'Funkcje', 'Dla kancelarii', 'Bezpieczeństwo', 'Opinie', 'Cennik', 'FAQ', 'Footer'].map((s, i) => (

@@ -43,7 +43,7 @@ export default function BackupsPage() {
                 <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Ostatni pełny</span><HardDrive size={16} className="stat-card-icon" /></div><div className="stat-card-value" style={{ fontSize: 18 }}>2026-02-09</div></div>
                 <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Łączna wielkość</span><HardDrive size={16} className="stat-card-icon" /></div><div className="stat-card-value">9.4 GB</div></div>
             </div>
-            <div className="grid-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="card">
                     <div className="card-header"><span className="card-title">Historia kopii zapasowych</span></div>
                     {isMobile ? (

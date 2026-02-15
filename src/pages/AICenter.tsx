@@ -57,7 +57,7 @@ export default function AICenterPage() {
                     <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Koszt miesięczny</span><Settings size={16} className="stat-card-icon" /></div><div className="stat-card-value">$51.55</div></div>
                     <div className="stat-card"><div className="stat-card-header"><span className="stat-card-label">Niska pewność</span><AlertTriangle size={16} className="stat-card-icon" /></div><div className="stat-card-value" style={{ color: 'var(--warning)' }}>12</div></div>
                 </div>
-                <div className="grid-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="card">
                         <div className="card-header"><span className="card-title">Zapytania AI – 6 miesięcy</span></div>
                         <ResponsiveContainer width="100%" height={260}>
@@ -84,7 +84,7 @@ export default function AICenterPage() {
             </>}
 
             {tab === 'providers' && (
-                <div className="grid-2">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {providers.map(p => (
                         <div key={p.name} className="card">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
